@@ -3,7 +3,7 @@ package com.simulator.model;
 /**
  * Implements a 2-input NOR gate using composition (OR + NOT).
  */
-public class NorGate implements BinaryGate {
+public class NorGate extends AbstractGate implements BinaryGate {
 
     // Encapsulated internal gates
     private final OrGate orGate;
@@ -30,6 +30,6 @@ public class NorGate implements BinaryGate {
     @Override
     public boolean getOutput() {
         // Get the output from the final gate in the chain
-        return this.notGate.getOutput();
+        return this.notGate.getSafeOutput();
     }
 }

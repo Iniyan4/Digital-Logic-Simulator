@@ -94,6 +94,7 @@ public class WorkspaceManager {
             case "NOR_GATE": model = new NorGate(); baseLabel = "NOR"; break;
             case "XOR_GATE": model = new XorGate(); baseLabel = "XOR"; break;
             case "XNOR_GATE": model = new XnorGate(); baseLabel = "XNOR"; break;
+            case "D_FLIP_FLOP": model = new DFlipFlop(); baseLabel = "D-FF"; break;
             default: return null;
         }
 

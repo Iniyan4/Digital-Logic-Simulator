@@ -5,7 +5,7 @@ package com.simulator.model;
  * We implement UnaryGate so it can be "plugged into"
  * our system just like any other gate.
  */
-public class OutputProbe implements UnaryGate {
+public class OutputProbe extends AbstractGate implements UnaryGate {
 
     private Gate input = null;
 
@@ -22,7 +22,7 @@ public class OutputProbe implements UnaryGate {
             return false;
         }
         // Recursively pull the value from the entire circuit
-        return input.getOutput();
+        return input.getSafeOutput();
     }
 
     /**

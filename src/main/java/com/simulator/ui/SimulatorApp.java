@@ -55,21 +55,23 @@ public class SimulatorApp extends Application {
      * Builds and displays the Front Page / Welcome Screen.
      */
     public void showWelcomeScreen() {
-        VBox welcomeLayout = new VBox(20);
+        VBox welcomeLayout = new VBox(30);
         welcomeLayout.setAlignment(Pos.CENTER);
-        welcomeLayout.setStyle("-fx-background-color: linear-gradient(to bottom right, #2b2b2b, #3d3d3d);");
+        // Dark theme background
+        welcomeLayout.setStyle("-fx-background-color: #2b2b2b;");
 
-        // Title
         Label title = new Label("Digital Logic Simulator");
-        title.setFont(Font.font("Arial", FontWeight.BOLD, 36));
-        title.setTextFill(Color.WHITE);
-        title.setEffect(new DropShadow(10, Color.BLACK));
+        title.setFont(Font.font("Segoe UI", FontWeight.BOLD, 42));
+        title.setTextFill(Color.web("#61dafb")); // React-like blue
+        title.setEffect(new DropShadow(15, Color.BLACK));
 
-        Label subtitle = new Label("Design, Simulate, Bundle");
-        subtitle.setFont(Font.font("Arial", 18));
+        Label subtitle = new Label("Design and Simulate Digital Circuits");
+        subtitle.setFont(Font.font("Segoe UI", 18));
         subtitle.setTextFill(Color.LIGHTGRAY);
 
-        // Buttons
+        VBox buttonBox = new VBox(15);
+        buttonBox.setAlignment(Pos.CENTER);
+
         Button newProjectBtn = createStyledButton("New Project");
         newProjectBtn.setOnAction(e -> {
             initializeWorkspace();
@@ -79,41 +81,39 @@ public class SimulatorApp extends Application {
 
         Button loadProjectBtn = createStyledButton("Load Project");
         loadProjectBtn.setOnAction(e -> {
-            // Initialize workspace (invisible) first so we have managers ready
-            if (mainScene == null) {
-                initializeWorkspace();
-            }
-            // Try to load
+            if (mainScene == null) initializeWorkspace();
+
+            // Use persistence manager
             boolean success = circuitPersistence.loadCircuit(mainStage);
             if (success) {
-                // Only switch view if user actually picked a file
                 mainStage.setScene(mainScene);
                 mainStage.centerOnScreen();
             }
         });
 
-        welcomeLayout.getChildren().addAll(title, subtitle, newProjectBtn, loadProjectBtn);
-        Scene welcomeScene = new Scene(welcomeLayout, 800, 600);
+        buttonBox.getChildren().addAll(newProjectBtn, loadProjectBtn);
+        welcomeLayout.getChildren().addAll(title, subtitle, buttonBox);
+
+        Scene welcomeScene = new Scene(welcomeLayout, 900, 650);
         mainStage.setScene(welcomeScene);
     }
 
-    /**
-     * Helper to style the Welcome Screen buttons.
-     */
     private Button createStyledButton(String text) {
         Button btn = new Button(text);
-        btn.setFont(Font.font("Arial", 16));
-        btn.setPrefWidth(200);
-        btn.setPrefHeight(40);
+        btn.setFont(Font.font("Segoe UI", FontWeight.SEMI_BOLD, 16));
+        btn.setPrefWidth(220);
+        btn.setPrefHeight(45);
         btn.setStyle(
-                "-fx-background-color: #4a90e2; " +
+                "-fx-background-color: #3c3c3c; " +
                         "-fx-text-fill: white; " +
-                        "-fx-background-radius: 5; " +
+                        "-fx-background-radius: 8; " +
+                        "-fx-border-color: #61dafb; " +
+                        "-fx-border-radius: 8; " +
                         "-fx-cursor: hand;"
         );
         // Simple hover effect
-        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #357abd; -fx-text-fill: white; -fx-background-radius: 5;"));
-        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: #4a90e2; -fx-text-fill: white; -fx-background-radius: 5;"));
+        btn.setOnMouseEntered(e -> btn.setStyle("-fx-background-color: #505050; -fx-text-fill: white; -fx-background-radius: 8; -fx-border-color: #61dafb; -fx-border-radius: 8;"));
+        btn.setOnMouseExited(e -> btn.setStyle("-fx-background-color: #3c3c3c; -fx-text-fill: white; -fx-background-radius: 8; -fx-border-color: #61dafb; -fx-border-radius: 8;"));
         return btn;
     }
 

@@ -4,7 +4,7 @@ package com.simulator.model;
  * Implements a 2-input XOR gate using composition.
  * Logic: (A AND (NOT B)) OR ((NOT A) AND B)
  */
-public class XorGate implements BinaryGate {
+public class XorGate extends AbstractGate implements BinaryGate {
 
     // Encapsulated internal gates
     private final NotGate notA;
@@ -52,6 +52,6 @@ public class XorGate implements BinaryGate {
     @Override
     public boolean getOutput() {
         // The final output is from the OR gate
-        return this.finalOr.getOutput();
+        return this.finalOr.getSafeOutput();
     }
 }

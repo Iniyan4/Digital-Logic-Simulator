@@ -93,7 +93,8 @@ public class PaletteManager {
                 new PaletteIcon("NAND", "NAND_GATE"),
                 new PaletteIcon("NOR", "NOR_GATE"),
                 new PaletteIcon("XOR", "XOR_GATE"),
-                new PaletteIcon("XNOR", "XNOR_GATE")
+                new PaletteIcon("XNOR", "XNOR_GATE"),
+                new PaletteIcon("D Flip-Flop", "D_FLIP_FLOP")
         );
 
         // Custom Gates

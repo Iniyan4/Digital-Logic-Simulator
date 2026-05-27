@@ -3,7 +3,7 @@ package com.simulator.model;
 /**
  * Implements a 2-input XNOR gate using composition (XOR + NOT).
  */
-public class XnorGate implements BinaryGate {
+public class XnorGate extends AbstractGate implements BinaryGate {
 
     // Encapsulated internal gates
     private final XorGate xorGate;
@@ -29,6 +29,6 @@ public class XnorGate implements BinaryGate {
 
     @Override
     public boolean getOutput() {
-        return this.notGate.getOutput();
+        return this.notGate.getSafeOutput();
     }
 }

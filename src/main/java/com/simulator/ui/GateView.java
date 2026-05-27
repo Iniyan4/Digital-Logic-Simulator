@@ -102,6 +102,11 @@ public class GateView extends Pane {
      * Updates the UI state (color and label) based on the model.
      */
     public void update() {
+
+        if (gateModel != null) {
+            this.currentEvaluatedValue = gateModel.getOutput();
+        }
+
         if (gateModel instanceof OutputProbe) {
             OutputProbe probeModel = (OutputProbe) gateModel;
             boolean result = probeModel.getResult();
@@ -288,6 +293,14 @@ public class GateView extends Pane {
     public void setCustomLabel(String customLabel) {
         this.customLabel = customLabel;
         updateLabelText(); // Refresh the UI immediately
+    }
+
+    // Add this field to the top of GateView class
+    private boolean currentEvaluatedValue = false;
+
+    // Add this getter method
+    public boolean getCurrentEvaluatedValue() {
+        return this.currentEvaluatedValue;
     }
 
     public String getGateType() {

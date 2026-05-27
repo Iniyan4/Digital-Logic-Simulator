@@ -4,7 +4,7 @@ package com.simulator.model;
  * Implements a 2-input NAND gate.
  * It "is a" BinaryGate, but "has a" AndGate and a NotGate.
  */
-public class NandGate implements BinaryGate {
+public class NandGate extends AbstractGate implements BinaryGate {
 
     // Internal gates (Encapsulation)
     private final AndGate andGate;
@@ -34,6 +34,6 @@ public class NandGate implements BinaryGate {
     @Override
     public boolean getOutput() {
         // The final output is the output of the internal NOT gate
-        return this.notGate.getOutput();
+        return this.notGate.getSafeOutput();
     }
 }

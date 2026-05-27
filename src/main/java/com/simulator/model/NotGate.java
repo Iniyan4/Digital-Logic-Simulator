@@ -4,7 +4,7 @@ package com.simulator.model;
  * Implements a NOT gate (Inverter).
  * This is a concrete implementation of the UnaryGate interface.
  */
-public class NotGate implements UnaryGate {
+public class NotGate extends AbstractGate implements UnaryGate {
 
     private Gate input = null;
 
@@ -20,6 +20,6 @@ public class NotGate implements UnaryGate {
             return true; // NOT(false) is true
         }
         // The core logic: return the inverse of the input
-        return !input.getOutput();
+        return !input.getSafeOutput();
     }
 }

@@ -20,4 +20,14 @@ public class InputSwitch implements Gate {
     public boolean getOutput() {
         return this.state;
     }
+
+    @Override
+    public boolean getSafeOutput() {
+        return getOutput();
+    }
+
+    @Override
+    public void resetEvaluation() {
+        // No-op for constant/independent source gates
+    }
 }
