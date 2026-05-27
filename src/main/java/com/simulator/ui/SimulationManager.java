@@ -5,6 +5,7 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -20,16 +21,28 @@ public class SimulationManager {
     private final List<GateView> allGateViews;
     private Timeline clockTimer;
     private final TableView<boolean[]> truthTable;
+    private final javafx.scene.layout.Pane rootPane;
+    private double currentFrequencyHz = 1.0;
 
-    public SimulationManager(List<GateView> allGateViews, TableView<boolean[]> truthTable) {
+    public void setClockFrequency(double hz) {
+        this.currentFrequencyHz = hz;
+        if (clockTimer != null && clockTimer.getStatus() == Animation.Status.RUNNING) {
+            clockTimer.stop();
+            startClock(); // Restart with new speed definitions
+        }
+    }
+
+    public SimulationManager(List<GateView> allGateViews, TableView<boolean[]> truthTable, javafx.scene.layout.Pane rootPane) {
         this.allGateViews = allGateViews;
         this.truthTable = truthTable;
+        this.rootPane = rootPane;
     }
 
     public void startClock() {
-        clockTimer = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
-            // We do NOT manually call view.toggle() here anymore.
-            // Instead, we pass true to signal that this update tick is driven by a clock event.
+        // Calculate period: 1 / frequency
+        double periodSeconds = 1.0 / currentFrequencyHz;
+
+        clockTimer = new Timeline(new KeyFrame(Duration.seconds(periodSeconds), event -> {
             triggerSynchronousClockTick();
         }));
         clockTimer.setCycleCount(Animation.INDEFINITE);
@@ -41,40 +54,39 @@ public class SimulationManager {
      * Clocks remain unchanged, but the D-FF state pipeline handles signal propagation.
      */
     public void triggerCircuitUpdate() {
-        evaluateSimulationEngine(false);
+        evaluateSimulationEngine();
     }
 
-    /**
-     * Driven by the central master timer timeline.
-     * Prepares and commits clock state transitions alongside the sequential network.
-     */
     public void triggerSynchronousClockTick() {
-        evaluateSimulationEngine(true);
+        // FIX: Pre-commit clock changes before evaluating the rest of the circuit.
+        // This allows edge-detectors (like D-FFs) to see the rising edge during Phase 1.
+        for (GateView view : allGateViews) {
+            Gate model = view.getGateModel();
+            if (model instanceof ClockGate) {
+                ClockGate cg = (ClockGate) model;
+                cg.prepareToggle();
+                cg.commitToggle();
+                view.update(); // Update the UI color immediately
+            }
+        }
+        evaluateSimulationEngine();
     }
 
     /**
      * Unified Two-Phase Commit Engine execution routine.
      */
-    private void evaluateSimulationEngine(boolean isClockTickEvent) {
+    private void evaluateSimulationEngine() { // <-- Removed the boolean parameter
         // PHASE 1: Prepare/Capture Phase
-        // Prepares the state transitions based on conditions BEFORE states change.
         for (GateView view : allGateViews) {
             Gate model = view.getGateModel();
-            if (isClockTickEvent && model instanceof ClockGate) {
-                ((ClockGate) model).prepareToggle();
-            }
             if (model instanceof DFlipFlop) {
                 ((DFlipFlop) model).prepareNextState();
             }
         }
 
         // PHASE 2: Commit Phase
-        // Applies all pending state transitions simultaneously to eliminate timing drift.
         for (GateView view : allGateViews) {
             Gate model = view.getGateModel();
-            if (isClockTickEvent && model instanceof ClockGate) {
-                ((ClockGate) model).commitToggle();
-            }
             if (model instanceof DFlipFlop) {
                 ((DFlipFlop) model).commitState();
             }
@@ -89,14 +101,12 @@ public class SimulationManager {
             settled = true;
             passes++;
 
-            // Reset tracking flags for this sub-pass execution loop
             for (GateView view : allGateViews) {
                 if (view.getGateModel() != null) {
                     view.getGateModel().resetEvaluation();
                 }
             }
 
-            // Cascade signals down the network path
             for (GateView view : allGateViews) {
                 boolean previousValue = view.getCurrentEvaluatedValue();
                 view.update();
@@ -104,6 +114,12 @@ public class SimulationManager {
 
                 if (previousValue != currentVal) {
                     settled = false;
+                }
+            }
+
+            for (Node node : rootPane.getChildren()) {
+                if (node instanceof Wire) {
+                    ((Wire) node).updateSignalColor();
                 }
             }
         }
@@ -168,21 +184,19 @@ public class SimulationManager {
         List<GateView> outputs = new ArrayList<>();
         List<GateView> stateFeedbackGates = new ArrayList<>();
 
-        // 1. Classify Components
+        // 1. Classify Components (Only track explicit DFlipFlops as sequential states)
         for (GateView view : allGateViews) {
             if (view.getGateModel() instanceof InputSwitch || view.getGateModel() instanceof ClockGate) {
                 inputs.add(view);
             } else if (view.getGateModel() instanceof OutputProbe) {
                 outputs.add(view);
-            } else {
-                // Treat intermediate logic gates as potential state variables if they are part of feedback loops
+            } else if (view.getGateModel() instanceof DFlipFlop) {
                 stateFeedbackGates.add(view);
             }
         }
 
         if (inputs.isEmpty() || outputs.isEmpty()) return;
 
-        // Limit state tracking to a reasonable number to avoid exponential table explosions (e.g., max 4 state lines)
         int maxTrackedStates = Math.min(stateFeedbackGates.size(), 3);
         List<GateView> trackedStates = stateFeedbackGates.subList(0, maxTrackedStates);
 
@@ -191,9 +205,10 @@ public class SimulationManager {
         int totalStateColumns = numInputs + numStates;
         int numOutputs = outputs.size();
 
-        // 2. Cache current live states to restore later
-        Map<Gate, Boolean> originalSwitchStates = new HashMap<>();
-        Map<GateView, Boolean> originalInternalStates = new HashMap<>();
+        // 2. Cache current live states deeply
+        Map<InputSwitch, Boolean> originalSwitchStates = new HashMap<>();
+        Map<AbstractGate, Boolean> originalCombinationalStates = new HashMap<>();
+        Map<DFlipFlop, Object> originalDFFStates = new HashMap<>();
 
         for (GateView inputView : inputs) {
             if (inputView.getGateModel() instanceof InputSwitch) {
@@ -201,12 +216,17 @@ public class SimulationManager {
                 originalSwitchStates.put(sw, sw.getOutput());
             }
         }
-        for (GateView stateView : allGateViews) {
-            originalInternalStates.put(stateView, stateView.getCurrentEvaluatedValue());
+
+        for (GateView view : allGateViews) {
+            Gate model = view.getGateModel();
+            if (model instanceof DFlipFlop) {
+                originalDFFStates.put((DFlipFlop) model, ((DFlipFlop) model).captureStateSnapshot());
+            } else if (model instanceof AbstractGate) {
+                originalCombinationalStates.put((AbstractGate) model, view.getCurrentEvaluatedValue());
+            }
         }
 
         // 3. Create Columns
-        // External Input Columns
         for (int i = 0; i < numInputs; i++) {
             final int colIndex = i;
             String colName = inputs.get(i).getLabelText().replace(": 0", "").replace(": 1", "");
@@ -216,7 +236,6 @@ public class SimulationManager {
             truthTable.getColumns().add(col);
         }
 
-        // Present State Columns Q(t)
         for (int i = 0; i < numStates; i++) {
             final int colIndex = i + numInputs;
             String colName = trackedStates.get(i).getLabelText();
@@ -226,7 +245,6 @@ public class SimulationManager {
             truthTable.getColumns().add(col);
         }
 
-        // Next State/Output Columns Q(t+1)
         for (int i = 0; i < numOutputs; i++) {
             final int colIndex = i + totalStateColumns;
             String colName = outputs.get(i).getLabelText();
@@ -243,7 +261,7 @@ public class SimulationManager {
         for (int i = 0; i < numRows; i++) {
             boolean[] rowData = new boolean[totalStateColumns + numOutputs];
 
-            // Assign Inputs for this row combination
+            // Assign Inputs
             for (int j = 0; j < numInputs; j++) {
                 boolean state = ((i >> (totalStateColumns - 1 - j)) & 1) == 1;
                 Gate model = inputs.get(j).getGateModel();
@@ -251,20 +269,20 @@ public class SimulationManager {
                 rowData[j] = state;
             }
 
-            // Force Present State Q(t) for this row combination directly into internal gate memory registers
+            // Seeding Present States directly into registers
             for (int j = 0; j < numStates; j++) {
                 boolean state = ((i >> (numStates - 1 - j)) & 1) == 1;
-                Gate model = trackedStates.get(j).getGateModel();
-                if (model instanceof AbstractGate) {
-                    ((AbstractGate) model).forceStableState(state); // Requires an exposed method to seed values
-                }
+                DFlipFlop dff = (DFlipFlop) trackedStates.get(j).getGateModel();
+
+                // Force the internal state registers to match the truth table permutation row
+                dff.restoreStateSnapshot(new boolean[]{false, false, state, state, state});
                 rowData[j + numInputs] = state;
             }
 
-            // Run multi-pass circuit convergence to get the resulting Next State transitions
+            // Evaluate the permutation state changes
             triggerCircuitUpdate();
 
-            // Sample outputs/next states
+            // Sample outputs
             for (int k = 0; k < numOutputs; k++) {
                 boolean state = ((OutputProbe) outputs.get(k).getGateModel()).getResult();
                 rowData[k + totalStateColumns] = state;
@@ -274,16 +292,17 @@ public class SimulationManager {
 
         truthTable.setItems(javafx.collections.FXCollections.observableArrayList(allRowsData));
 
-        // 5. Restore live runtime environment state
-        for (Map.Entry<Gate, Boolean> entry : originalSwitchStates.entrySet()) {
-            ((InputSwitch) entry.getKey()).setState(entry.getValue());
+        // 5. Clean Environment Restoration Pass
+        for (Map.Entry<InputSwitch, Boolean> entry : originalSwitchStates.entrySet()) {
+            entry.getKey().setState(entry.getValue());
         }
-        for (Map.Entry<GateView, Boolean> entry : originalInternalStates.entrySet()) {
-            Gate model = entry.getKey().getGateModel();
-            if (model instanceof AbstractGate) {
-                ((AbstractGate) model).forceStableState(entry.getValue());
-            }
+        for (Map.Entry<AbstractGate, Boolean> entry : originalCombinationalStates.entrySet()) {
+            entry.getKey().forceStableState(entry.getValue());
         }
+        for (Map.Entry<DFlipFlop, Object> entry : originalDFFStates.entrySet()) {
+            entry.getKey().restoreStateSnapshot(entry.getValue());
+        }
+
         triggerCircuitUpdate();
     }
 

@@ -138,7 +138,7 @@ public class SimulatorApp extends Application {
         workspaceManager = new WorkspaceManager(rootPane, this, allGateViews, templateManager);
 
         TableView<boolean[]> truthTable = new TableView<>();
-        simulationManager = new SimulationManager(allGateViews, truthTable);
+        simulationManager = new SimulationManager(allGateViews, truthTable, rootPane);
 
         paletteManager = new PaletteManager(this, templateManager, circuitPersistence, mainStage);
         paletteManager.reloadPalette();
@@ -158,6 +158,22 @@ public class SimulatorApp extends Application {
         mainScene.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.DELETE || event.getCode() == KeyCode.BACK_SPACE) {
                 workspaceManager.removeSelectedItems();
+            }
+        });
+
+        // Inside initializeWorkspace() in SimulatorApp.java
+        mainScene.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.DELETE || event.getCode() == KeyCode.BACK_SPACE) {
+                workspaceManager.removeSelectedItems();
+            } else if (event.isControlDown() && event.getCode() == KeyCode.S) {
+                circuitPersistence.saveCircuit(mainStage);
+                event.consume();
+            } else if (event.isControlDown() && event.getCode() == KeyCode.L) {
+                circuitPersistence.loadCircuit(mainStage);
+                event.consume();
+            } else if (event.getCode() == KeyCode.ESCAPE) {
+                workspaceManager.deselectAll();
+                event.consume();
             }
         });
 

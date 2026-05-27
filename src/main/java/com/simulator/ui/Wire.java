@@ -68,6 +68,26 @@ public class Wire extends CubicCurve {
         setStroke(Color.BLACK);
         setStrokeWidth(3);
     }
+
+    // Inside Wire.java, add a dynamic update method:
+    public void updateSignalColor() {
+        if (startPin != null && startPin.getParentGateView() != null) {
+            boolean signalHigh = startPin.getParentGateView().getCurrentEvaluatedValue();
+
+            // If selected, keep the blue selection border highlight
+            if (getStroke() == Color.DODGERBLUE) {
+                return;
+            }
+
+            if (signalHigh) {
+                setStroke(Color.web("#2ecc71")); // Vivid Green for active signal
+                setStrokeWidth(3.5);             // Slightly thicker to stand out
+            } else {
+                setStroke(Color.web("#7f8c8d")); // Muted slate gray for inactive/Low lines
+                setStrokeWidth(2.5);
+            }
+        }
+    }
     // These methods are needed to manage the logical connection
     public ConnectionPin getStartPin() {
         return startPin;
