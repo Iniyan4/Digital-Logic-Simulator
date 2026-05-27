@@ -40,6 +40,7 @@ public class SimulatorApp extends Application {
     private PaletteManager paletteManager;
     private CircuitPersistence circuitPersistence;
     private TemplateManager templateManager;
+    private WaveformMonitor waveformMonitor;
 
     @Override
     public void start(Stage primaryStage) {
@@ -137,8 +138,10 @@ public class SimulatorApp extends Application {
         // 2. Init Managers
         workspaceManager = new WorkspaceManager(rootPane, this, allGateViews, templateManager);
 
+        waveformMonitor = new WaveformMonitor();
+
         TableView<boolean[]> truthTable = new TableView<>();
-        simulationManager = new SimulationManager(allGateViews, truthTable, rootPane);
+        simulationManager = new SimulationManager(allGateViews, truthTable, rootPane, waveformMonitor);
 
         paletteManager = new PaletteManager(this, templateManager, circuitPersistence, mainStage);
         paletteManager.reloadPalette();
@@ -147,6 +150,7 @@ public class SimulatorApp extends Application {
         BorderPane mainLayout = new BorderPane();
         mainLayout.setLeft(paletteManager.getPalettePane());
         mainLayout.setCenter(rootPane);
+        mainLayout.setBottom(waveformMonitor);
 
         ScrollPane tablePane = new ScrollPane(truthTable);
         tablePane.setFitToWidth(true);
@@ -204,6 +208,13 @@ public class SimulatorApp extends Application {
 
     public void generateTruthTable() {
         simulationManager.generateTruthTable();
+    }
+
+    // Inside SimulatorApp.java
+    public void setSimulationFrequency(double hz) {
+        if (simulationManager != null) {
+            simulationManager.setClockFrequency(hz);
+        }
     }
 
     public void clearWorkspace() {

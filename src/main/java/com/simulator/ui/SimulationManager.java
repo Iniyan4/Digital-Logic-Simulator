@@ -23,6 +23,7 @@ public class SimulationManager {
     private final TableView<boolean[]> truthTable;
     private final javafx.scene.layout.Pane rootPane;
     private double currentFrequencyHz = 1.0;
+    private WaveformMonitor waveformMonitor;
 
     public void setClockFrequency(double hz) {
         this.currentFrequencyHz = hz;
@@ -32,10 +33,11 @@ public class SimulationManager {
         }
     }
 
-    public SimulationManager(List<GateView> allGateViews, TableView<boolean[]> truthTable, javafx.scene.layout.Pane rootPane) {
+    public SimulationManager(List<GateView> allGateViews, TableView<boolean[]> truthTable, javafx.scene.layout.Pane rootPane, WaveformMonitor monitor) {
         this.allGateViews = allGateViews;
         this.truthTable = truthTable;
         this.rootPane = rootPane;
+        this.waveformMonitor = monitor;
     }
 
     public void startClock() {
@@ -70,6 +72,9 @@ public class SimulationManager {
             }
         }
         evaluateSimulationEngine();
+        if (waveformMonitor != null) {
+            waveformMonitor.recordSample(allGateViews);
+        }
     }
 
     /**

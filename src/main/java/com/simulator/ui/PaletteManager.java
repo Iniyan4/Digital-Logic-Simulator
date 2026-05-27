@@ -113,6 +113,27 @@ public class PaletteManager {
                 );
             }
         }
+
+        // Inside PaletteManager.java -> reloadPalette()
+        palettePane.getChildren().add(new Separator());
+
+        Label speedLabel = new Label("Clock Frequency: 1.0 Hz");
+        speedLabel.setStyle("-fx-font-weight: bold;");
+
+        javafx.scene.control.Slider speedSlider = new javafx.scene.control.Slider(0.2, 10.0, 1.0);
+        speedSlider.setShowTickMarks(true);
+        speedSlider.setShowTickLabels(true);
+        speedSlider.setMajorTickUnit(2.0);
+
+        speedSlider.valueProperty().addListener((obs, oldVal, newVal) -> {
+            double hz = newVal.doubleValue();
+            speedLabel.setText(String.format("Clock Frequency: %.1f Hz", hz));
+            app.setSimulationFrequency(hz); // Send update command to application wrapper
+        });
+
+        VBox speedContainer = new VBox(5, speedLabel, speedSlider);
+        speedContainer.setPadding(new Insets(5, 0, 5, 0));
+        palettePane.getChildren().add(speedContainer);
     }
 
     // Helper to create side-by-side buttons
